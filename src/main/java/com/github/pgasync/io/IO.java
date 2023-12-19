@@ -25,17 +25,19 @@ import java.nio.charset.Charset;
  */
 public class IO {
 
+    private static final String NULL = new String(new byte[]{0});
+
     public static String getCString(ByteBuffer buffer, Charset charset) {
         ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(255);
         for (int c = buffer.get(); c != 0; c = buffer.get()) {
             readBuffer.write(c);
         }
-        return new String(readBuffer.toByteArray(), charset);
+        return readBuffer.toString(charset);
     }
 
     public static void putCString(ByteBuffer buffer, String value, Charset charset) {
         if (!value.isEmpty()) {
-            buffer.put(value.getBytes(charset));
+            buffer.put(value.replace(NULL, "").getBytes(charset));
         }
         buffer.put((byte) 0);
     }
