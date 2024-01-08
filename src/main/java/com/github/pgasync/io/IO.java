@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
  */
 public class IO {
 
-    private static final String NULL = new String(new byte[]{0});
+    private static final String NULL = String.valueOf('\u0000');
 
     public static String getCString(ByteBuffer buffer, Charset charset) {
         ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(255);

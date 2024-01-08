@@ -12,7 +12,7 @@ public class IOTest {
 
     @Test
     public void nullCharacters() {
-        var stringWithNulls = new String(new char[]{'t', 'h', (char) 0x00, 'i', 's', ' ', (char) 0x00, 'n'});
+        var stringWithNulls = new String(new char[]{'t', 'h', '\u0000', 'i', 's', ' ', '\u0000', 'n'});
         var utf8Bytes = stringWithNulls.getBytes(StandardCharsets.UTF_8);
         assertEquals(utf8Bytes.length, stringWithNulls.length());
         var bb = ByteBuffer.allocate(16);
