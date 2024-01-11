@@ -1,5 +1,6 @@
 package com.github.pgasync.conversion;
 
+import com.github.pgasync.io.IO;
 import com.pgasync.Converter;
 import com.github.pgasync.Oid;
 
@@ -211,7 +212,7 @@ public class DataConverter {
         int i = 0;
         for (Object param : parameters) {
             String converted = fromObject(param);
-            params[i++] = converted == null ? null : converted.getBytes(encoding);
+            params[i++] = converted == null ? null : IO.removeNulls(converted).getBytes(encoding);
         }
         return params;
     }

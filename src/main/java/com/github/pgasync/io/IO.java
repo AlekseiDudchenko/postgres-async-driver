@@ -25,7 +25,7 @@ import java.nio.charset.Charset;
  */
 public class IO {
 
-    private static final String NULL = String.valueOf('\u0000');
+    public static final String NULL = String.valueOf('\u0000');
 
     public static String getCString(ByteBuffer buffer, Charset charset) {
         ByteArrayOutputStream readBuffer = new ByteArrayOutputStream(255);
@@ -37,9 +37,13 @@ public class IO {
 
     public static void putCString(ByteBuffer buffer, String value, Charset charset) {
         if (!value.isEmpty()) {
-            buffer.put(value.replace(NULL, "").getBytes(charset));
+            buffer.put(removeNulls(value).getBytes(charset));
         }
         buffer.put((byte) 0);
+    }
+
+    public static String removeNulls(String value) {
+        return value.replace(NULL, "");
     }
 
 }
