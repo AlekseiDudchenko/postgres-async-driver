@@ -20,6 +20,8 @@ import com.github.pgasync.io.backend.BackendKeyDataDecoder;
 import com.github.pgasync.io.backend.BindCompleteDecoder;
 import com.github.pgasync.io.backend.CloseCompleteDecoder;
 import com.github.pgasync.io.backend.CommandCompleteDecoder;
+import com.github.pgasync.io.backend.CopyInResponseDecoder;
+import com.github.pgasync.io.backend.CopyOutResponseDecoder;
 import com.github.pgasync.io.backend.DataRowDecoder;
 import com.github.pgasync.io.backend.ErrorResponseDecoder;
 import com.github.pgasync.io.backend.NoDataDecoder;
@@ -61,6 +63,8 @@ class NettyMessageDecoder extends ByteToMessageDecoder {
             new BindCompleteDecoder(),
             new NoDataDecoder(),
             new CommandCompleteDecoder(),
+            new CopyInResponseDecoder(),
+            new CopyOutResponseDecoder(),
             new DataRowDecoder(),
             new NotificationResponseDecoder(),
             new NoticeResponseDecoder()

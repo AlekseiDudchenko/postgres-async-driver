@@ -50,6 +50,14 @@ public interface ProtocolStream {
 
     boolean isConnected();
 
+    default boolean isReusable() {
+        return isConnected();
+    }
+
     CompletableFuture<Void> close();
+
+    default CompletableFuture<Void> abort() {
+        return close();
+    }
 
 }
