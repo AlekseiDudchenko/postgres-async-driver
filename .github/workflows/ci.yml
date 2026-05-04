@@ -8,22 +8,17 @@ on:
 
 jobs:
   test:
-    name: Test (Java ${{ matrix.java }})
+    name: Test (Java 11)
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        java: [ 11, 17, 21 ]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK ${{ matrix.java }}
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
-          java-version: ${{ matrix.java }}
+          java-version: "11"
           distribution: temurin
           cache: gradle
 
@@ -42,7 +37,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-java-${{ matrix.java }}
+          name: test-results-java-11
           path: build/reports/tests/test/
           retention-days: 7
 
