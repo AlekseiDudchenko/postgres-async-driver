@@ -154,6 +154,14 @@ public class PgConnection implements Connection {
         return stream.isConnected();
     }
 
+    boolean isReusable() {
+        return stream.isReusable();
+    }
+
+    CompletableFuture<Void> abort() {
+        return stream.abort();
+    }
+
     @Override
     public CompletableFuture<PreparedStatement> prepareStatement(String sql, Oid... parametersTypes) {
         return preparedStatementOf(sql, parametersTypes).thenApply(pgStmt -> pgStmt);

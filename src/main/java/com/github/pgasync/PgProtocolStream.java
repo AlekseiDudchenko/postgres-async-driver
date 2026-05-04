@@ -26,6 +26,8 @@ import com.github.pgasync.message.backend.NoticeResponse;
 import com.github.pgasync.message.backend.NotificationResponse;
 import com.github.pgasync.message.backend.ParameterStatus;
 import com.github.pgasync.message.backend.ReadyForQuery;
+import com.github.pgasync.message.backend.CopyInResponse;
+import com.github.pgasync.message.backend.CopyOutResponse;
 import com.github.pgasync.message.backend.RowDescription;
 import com.github.pgasync.message.backend.UnknownMessage;
 import com.github.pgasync.message.frontend.*;
@@ -58,6 +60,7 @@ public abstract class PgProtocolStream implements ProtocolStream {
     private Consumer<CommandComplete> onAffected;
 
     private boolean seenReadyForQuery;
+    private boolean reusable = true;
     private Message readyForQueryPendingMessage;
     private Message lastSentMessage;
 
@@ -94,6 +97,15 @@ public abstract class PgProtocolStream implements ProtocolStream {
         } else {
             return send(new PasswordMessage(userName, password, authRequired.getMd5Salt(), encoding));
         }
+    }
+
+    @Override
+    public boolean isReusable() {
+        return reusable;
+    }
+
+    protected void markUnrecoverable() {
+        reusable = false;
     }
 
     protected abstract void write(Message... messages);
@@ -216,6 +228,16 @@ public abstract class PgProtocolStream implements ProtocolStream {
                 consumeOnResponse().completeAsync(() -> response, futuresExecutor);
             }
             readyForQueryPendingMessage = null;
+        } else if (message instanceof CopyInResponse) {
+            markUnrecoverable();
+            gotException(new UnsupportedOperationException(
+                    "COPY IN is not supported yet. " +
+                    "Use parameterized INSERT statements for bulk loading data."));
+        } else if (message instanceof CopyOutResponse) {
+            markUnrecoverable();
+            gotException(new UnsupportedOperationException(
+                    "COPY OUT is not supported yet. " +
+                    "Use a regular SELECT query to fetch data instead."));
         } else if (message instanceof ParameterStatus) {
             Logger.getLogger(PgProtocolStream.class.getName()).log(Level.FINE, message.toString());
         } else if (message instanceof BackendKeyData) {
