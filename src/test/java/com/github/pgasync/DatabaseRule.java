@@ -6,29 +6,21 @@ import com.github.pgasync.netty.NettyConnectibleBuilder;
 import com.pgasync.Connectible;
 import com.pgasync.ConnectibleBuilder;
 import com.pgasync.ResultSet;
-import com.pgasync.Row;
 import org.junit.rules.ExternalResource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.utility.DockerImageName;
 
-import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
-import ru.yandex.qatools.embed.postgresql.PostgresExecutable;
-import ru.yandex.qatools.embed.postgresql.PostgresProcess;
-import ru.yandex.qatools.embed.postgresql.PostgresStarter;
-import ru.yandex.qatools.embed.postgresql.config.AbstractPostgresConfig;
-import ru.yandex.qatools.embed.postgresql.config.PostgresConfig;
-import ru.yandex.qatools.embed.postgresql.distribution.Version;
 
 /**
  * @author Antti Laisi
  */
 class DatabaseRule extends ExternalResource {
 
-    private static PostgresProcess process;
+    private static PostgreSQLContainer<?> postgres;
 
     final ConnectibleBuilder builder;
     Connectible pool;
@@ -45,22 +37,17 @@ class DatabaseRule extends ExternalResource {
                 builder.hostname("localhost");
                 builder.port(Integer.parseInt(port));
             } else {
-                if (process == null) {
-                    try {
-                        PostgresStarter<PostgresExecutable, PostgresProcess> runtime = PostgresStarter.getDefaultInstance();
-                        PostgresConfig config = new PostgresConfig(Version.V11_1, new AbstractPostgresConfig.Net(),
-                                new AbstractPostgresConfig.Storage("async-pg"), new AbstractPostgresConfig.Timeout(),
-                                new AbstractPostgresConfig.Credentials("async-pg", "async-pg"));
-                        PostgresExecutable exec = runtime.prepare(config);
-                        process = exec.start();
+                if (postgres == null) {
+                    postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11.1"))
+                            .withDatabaseName("async-pg")
+                            .withUsername("async-pg")
+                            .withPassword("async-pg");
+                    postgres.start();
 
-                        System.out.printf("Started postgres to %s:%d%n", process.getConfig().net().host(), process.getConfig().net().port());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    System.out.printf("Started postgres to %s:%d%n", postgres.getHost(), postgres.getFirstMappedPort());
                 }
-                builder.hostname(process.getConfig().net().host());
-                builder.port(process.getConfig().net().port());
+                builder.hostname(postgres.getHost());
+                builder.port(postgres.getFirstMappedPort());
             }
         }
     }
