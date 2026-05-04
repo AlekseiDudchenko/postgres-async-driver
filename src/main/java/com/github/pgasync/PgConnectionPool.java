@@ -108,6 +108,10 @@ public class PgConnectionPool extends PgConnectible {
             return delegate.isConnected();
         }
 
+        boolean isReusable() {
+            return delegate.isReusable() && delegate.isConnected();
+        }
+
         private void closeNextStatement(Iterator<PooledPgPreparedStatement> statementsSource, CompletableFuture<Void> onComplete) {
             if (statementsSource.hasNext()) {
                 statementsSource.next().delegate.close()
@@ -125,6 +129,9 @@ public class PgConnectionPool extends PgConnectible {
         }
 
         CompletableFuture<Void> shutdown() {
+            if (!delegate.isReusable()) {
+                return delegate.abort();
+            }
             CompletableFuture<Void> onComplete = new CompletableFuture<>();
             closeNextStatement(statements.values().iterator(), onComplete);
             return onComplete
@@ -135,6 +142,10 @@ public class PgConnectionPool extends PgConnectible {
                         return delegate.close();
                     })
                     .thenCompose(Function.identity());
+        }
+
+        CompletableFuture<Void> abort() {
+            return delegate.abort();
         }
 
         @Override
@@ -268,6 +279,25 @@ public class PgConnectionPool extends PgConnectible {
         if (connection == null) {
             throw new IllegalArgumentException("'connection' should be not null");
         }
+        if (!connection.isReusable()) {
+            Runnable afterRelease = locked(() -> {
+                size--;
+                boolean shouldReplace = closing == null && !pending.isEmpty() && size < maxConnections;
+                if (shouldReplace) {
+                    size++;
+                }
+                Runnable checkClosed = checkClosed();
+                return () -> {
+                    connection.abort();
+                    if (shouldReplace) {
+                        obtainConnection();
+                    }
+                    checkClosed.run();
+                };
+            });
+            futuresExecutor.execute(afterRelease);
+            return;
+        }
         Runnable lucky = locked(() -> {
             CompletableFuture<? super Connection> nextUser = pending.poll();
             if (nextUser != null) {
@@ -300,49 +330,53 @@ public class PgConnectionPool extends PgConnectible {
                     }
                 });
                 if (makeNewConnection) {
-                    obtainStream.get()
-                            .thenApply(stream -> new PooledPgConnection(new PgConnection(stream, dataConverter))
-                                    .connect(username, password, database))
-                            .thenCompose(Function.identity())
-                            .thenApply(pooledConnection -> {
-                                if (validationQuery != null && !validationQuery.isBlank()) {
-                                    return pooledConnection.completeScript(validationQuery)
-                                            .handle((rss, th) -> {
-                                                if (th != null) {
-                                                    return ((PooledPgConnection) pooledConnection).delegate.close()
-                                                            .thenApply(v -> CompletableFuture.<Connection>failedFuture(th))
-                                                            .thenCompose(Function.identity());
-                                                } else {
-                                                    return CompletableFuture.completedFuture(pooledConnection);
-                                                }
-                                            })
-                                            .thenCompose(Function.identity());
-                                } else {
-                                    return CompletableFuture.completedFuture(pooledConnection);
-                                }
-                            })
-                            .thenCompose(Function.identity())
-                            .whenComplete((connected, th) -> {
-                                if (th == null) {
-                                    release((PooledPgConnection) connected);
-                                } else {
-                                    Collection<Runnable> actions = locked(() -> {
-                                        size--;
-                                        List<Runnable> unlucky = pending.stream()
-                                                .<Runnable>map(item -> () ->
-                                                        item.completeExceptionally(th))
-                                                .collect(Collectors.toList());
-                                        unlucky.add(checkClosed());
-                                        pending.clear();
-                                        return unlucky;
-                                    });
-                                    actions.forEach(futuresExecutor::execute);
-                                }
-                            });
+                    obtainConnection();
                 }
                 return deferred;
             }
         }
+    }
+
+    private void obtainConnection() {
+        obtainStream.get()
+                .thenApply(stream -> new PooledPgConnection(new PgConnection(stream, dataConverter))
+                        .connect(username, password, database))
+                .thenCompose(Function.identity())
+                .thenApply(pooledConnection -> {
+                    if (validationQuery != null && !validationQuery.isBlank()) {
+                        return pooledConnection.completeScript(validationQuery)
+                                .handle((rss, th) -> {
+                                    if (th != null) {
+                                        return ((PooledPgConnection) pooledConnection).delegate.close()
+                                                .thenApply(v -> CompletableFuture.<Connection>failedFuture(th))
+                                                .thenCompose(Function.identity());
+                                    } else {
+                                        return CompletableFuture.completedFuture(pooledConnection);
+                                    }
+                                })
+                                .thenCompose(Function.identity());
+                    } else {
+                        return CompletableFuture.completedFuture(pooledConnection);
+                    }
+                })
+                .thenCompose(Function.identity())
+                .whenComplete((connected, th) -> {
+                    if (th == null) {
+                        release((PooledPgConnection) connected);
+                    } else {
+                        Collection<Runnable> actions = locked(() -> {
+                            size--;
+                            List<Runnable> unlucky = pending.stream()
+                                    .<Runnable>map(item -> () ->
+                                            item.completeExceptionally(th))
+                                    .collect(Collectors.toList());
+                            unlucky.add(checkClosed());
+                            pending.clear();
+                            return unlucky;
+                        });
+                        actions.forEach(futuresExecutor::execute);
+                    }
+                });
     }
 
     private static class CloseTuple {
@@ -389,9 +423,10 @@ public class PgConnectionPool extends PgConnectible {
     }
 
     private Connection firstAliveConnection() {
-        Connection connection = connections.poll();
-        while (connection != null && !connection.isConnected()) {
+        PooledPgConnection connection = connections.poll();
+        while (connection != null && !connection.isReusable()) {
             size--;
+            connection.abort();
             connection = connections.poll();
         }
         return connection;
