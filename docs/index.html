@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="pgAsync is a non-blocking asynchronous PostgreSQL Java driver.">
+  <title>pgAsync - Asynchronous PostgreSQL Java Driver</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="pgAsync home">
+      <span class="brand-mark">pg</span>
+      <span>pgAsync</span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      <a href="#install">Install</a>
+      <a href="#usage">Usage</a>
+      <a href="#testing">Testing</a>
+      <a href="https://github.com/AlekseiDudchenko/postgres-async-driver">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Asynchronous PostgreSQL Java driver</p>
+        <h1>pgAsync</h1>
+        <p class="lede">
+          A non-blocking PostgreSQL driver with connection pooling, prepared statements,
+          transactions, standard SQL type support, and custom converters.
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#install">Install</a>
+          <a class="button secondary" href="https://github.com/AlekseiDudchenko/postgres-async-driver">View source</a>
+        </div>
+      </div>
+
+      <div class="protocol-panel" aria-label="Protocol flow illustration">
+        <div class="node client">
+          <span class="node-title">Client</span>
+          <span class="node-meta">CompletableFuture API</span>
+        </div>
+        <div class="stream">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="node postgres">
+          <span class="node-title">PostgreSQL</span>
+          <span class="node-meta">Protocol v3</span>
+        </div>
+        <div class="query-window">
+          <div class="window-bar">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <pre><code>pool.completeQuery(
+  "select count(*) cnt from cp_test"
+).thenAccept(resultSet -&gt; {
+  int count = resultSet.at(0).getInt("cnt");
+});</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="strip" aria-label="Project highlights">
+      <div>
+        <strong>Non-blocking</strong>
+        <span>Built around asynchronous query execution.</span>
+      </div>
+      <div>
+        <strong>PostgreSQL focused</strong>
+        <span>Implements PostgreSQL protocol messages directly.</span>
+      </div>
+      <div>
+        <strong>Testcontainers ready</strong>
+        <span>Integration tests start Postgres automatically.</span>
+      </div>
+    </section>
+
+    <section class="section" id="install">
+      <div class="section-copy">
+        <p class="eyebrow">Install</p>
+        <h2>Add the source dependency</h2>
+        <p>
+          The project is published as a Gradle source dependency. Add the Git repository
+          to `settings.gradle.kts`, then depend on the module from your build file.
+        </p>
+      </div>
+      <div class="code-grid">
+        <figure class="code-card">
+          <figcaption>settings.gradle.kts</figcaption>
+          <pre><code>sourceControl {
+  gitRepository(uri("https://github.com/AlekseiDudchenko/postgres-async-driver.git")) {
+    producesModule("com.github.pgasync:postgres-async-driver")
+  }
+}</code></pre>
+        </figure>
+        <figure class="code-card">
+          <figcaption>build.gradle.kts</figcaption>
+          <pre><code>dependencies {
+  implementation("com.github.pgasync:postgres-async-driver:v1.0.5")
+}</code></pre>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section alt" id="usage">
+      <div class="section-copy">
+        <p class="eyebrow">Usage</p>
+        <h2>Run queries through a connectible pool</h2>
+        <p>
+          The public API lives in `com.pgasync`; implementation classes live under
+          `com.github.pgasync`.
+        </p>
+      </div>
+      <figure class="code-card wide">
+        <figcaption>Query example</figcaption>
+        <pre><code>Connectible pool = new NettyConnectibleBuilder()
+    .database("postgres")
+    .username("postgres")
+    .password("postgres")
+    .ssl(true)
+    .maxConnections(4)
+    .pool();
+
+pool.completeQuery("select count(*) cnt from cp_test")
+    .thenAccept(resultSet -&gt; {
+      Row row = resultSet.at(0);
+      int count = row.getInt("cnt");
+    });</code></pre>
+      </figure>
+    </section>
+
+    <section class="section features">
+      <article class="feature-card">
+        <h3>Connection Pooling</h3>
+        <p>Reuse PostgreSQL connections and execute concurrent asynchronous work.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Prepared Statements</h3>
+        <p>Bind parameters and keep query execution explicit at the API boundary.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Transactions</h3>
+        <p>Begin, commit, and roll back transactional units with future-based flows.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Custom Converters</h3>
+        <p>Extend type handling for application-specific PostgreSQL values.</p>
+      </article>
+    </section>
+
+    <section class="section" id="testing">
+      <div class="section-copy">
+        <p class="eyebrow">Testing</p>
+        <h2>Run the local test suite</h2>
+        <p>
+          Tests use JUnit 4 and Testcontainers for PostgreSQL. Start Docker Desktop first;
+          Testcontainers will pull and run `postgres:11` automatically.
+        </p>
+      </div>
+      <figure class="code-card terminal">
+        <figcaption>PowerShell</figcaption>
+        <pre><code>docker info
+.\gradlew.bat test --no-daemon</code></pre>
+      </figure>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span>pgAsync</span>
+    <a href="https://github.com/AlekseiDudchenko/postgres-async-driver/blob/master/LICENSE">Apache-2.0 License</a>
+  </footer>
+</body>
+</html>
