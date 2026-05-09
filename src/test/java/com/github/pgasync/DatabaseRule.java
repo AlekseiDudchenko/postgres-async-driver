@@ -37,18 +37,23 @@ class DatabaseRule extends ExternalResource {
                 builder.hostname("localhost");
                 builder.port(Integer.parseInt(port));
             } else {
-                if (postgres == null) {
-                    postgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11.1"))
-                            .withDatabaseName("async-pg")
-                            .withUsername("async-pg")
-                            .withPassword("async-pg");
-                    postgres.start();
-
-                    System.out.printf("Started postgres to %s:%d%n", postgres.getHost(), postgres.getFirstMappedPort());
-                }
+                startPostgres();
                 builder.hostname(postgres.getHost());
                 builder.port(postgres.getFirstMappedPort());
             }
+        }
+    }
+
+    private static synchronized void startPostgres() {
+        if (postgres == null) {
+            PostgreSQLContainer<?> startedPostgres = new PostgreSQLContainer<>(DockerImageName.parse("postgres:11"))
+                    .withDatabaseName("async-pg")
+                    .withUsername("async-pg")
+                    .withPassword("async-pg");
+            startedPostgres.start();
+            postgres = startedPostgres;
+
+            System.out.printf("Started postgres to %s:%d%n", postgres.getHost(), postgres.getFirstMappedPort());
         }
     }
 
