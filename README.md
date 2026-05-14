@@ -118,3 +118,7 @@ then you will be able to write your business logic in a sync-like style like thi
 ```
 This code is written in `Kotlin` and it operates on the results directly because `upon()` function turns a `CompleteableFuture` in a suspension point.
 With this trick you write your code like it would be synchronous, but it remains fully asynchronous and non-blocking! 
+
+## See Also
+
+- [pgAsync Benchmark Lab](https://lab.niocess.com/) — JDBC vs pgAsync throughput and latency results under load
